@@ -144,6 +144,20 @@ end
 # ENV variable from config file
 logfile = ENV.member?('logfile') ? ENV['logfile'] : "threddsServlet.log"
 
+if ARGV[0] == "autoconf"
+  begin
+    # No access to logfile here, so just assume it works.
+    if true
+      puts "yes"
+    else
+      puts "no"
+    end
+  rescue
+    puts "no (#{$!})"
+  end
+  exit 0
+end
+
 # MODE
 e = IO.new(2, "w")
 mode = $0.gsub /.*\/*thredds_/, ""
@@ -152,8 +166,19 @@ if mode =~ /\.*thredds\*/ then
   e.puts "You passed in: #{mode}"
   exit 1
 end
-mode = mode.to_sym
+mode = mode.empty? ? :none : mode.to_sym
 instance = /[\w]+$/.match($0).to_s.split("_")[0..-2].map(&:capitalize).join(" ") rescue "THREDDS"
+
+# Statefile parsing
+statefile = "#{ENV['MUNIN_PLUGSTATE']}/thredds-#{mode.to_s}.state"
+starttime = Time.at(File.open(statefile, "rb") { |f| f.read.to_f }) rescue (Time.now - (60*60*24*365*100))
+
+if ARGV[0] == "suggest"
+  @data.each do |k,v|
+    print "#{k}\n"
+  end
+  exit 0
+end
 
 if ARGV[0] == "config"
   if mode == :requests
@@ -176,33 +201,6 @@ if ARGV[0] == "config"
     puts "errors.draw LINE2"
     puts "errors.type DERIVE"
     puts "errors.min 0"
-  end
-  exit 0
-end
-
-# Statefile parsing
-statefile = "#{ENV['MUNIN_PLUGSTATE']}/thredds-#{mode.to_s}.state"
-starttime = Time.at(File.open(statefile, "rb") { |f| f.read.to_f }) rescue (Time.now - (60*60*24*365*100))
-
-if ARGV[0] == "autoconf"
-  begin
-    # No access to logfile here, so just assume it works.
-    if true
-      puts "yes"
-    else
-      puts "no"
-    end
-  rescue
-    puts "no (#{$!})"
-  end
-  exit 0
-end
-
-if ARGV[0] == "suggest"
-  if get_stats(logfile, starttime)
-    @data.each do |k,v|
-      print "#{k}\n"
-    end
   end
   exit 0
 end
