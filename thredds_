@@ -10,6 +10,7 @@ thredds_ - Munin plugin to monitor THREDDS servers.
 =head1 APPLICABLE SYSTEMS
 
 THREDDS 4.2 of higher (not tested on previous versions)
+Ruby >= 1.8.7
 
 =head1 USAGE
 
@@ -46,6 +47,7 @@ Location of the THREDDS logfile (threddsServlet.log)
 =end
 
 require 'date'
+require 'time'
 
 # Data hash to fill in
 @data = {
@@ -77,7 +79,7 @@ def get_stats(filepath, starttime)
   line_date = nil
 
   File.foreach(filepath) do |line|
-    line_date = DateTime.parse(date_regex.match(line).to_s).to_time rescue next
+    line_date = Time.parse(date_regex.match(line).to_s) rescue next
 
     next if line_date < starttime
 
@@ -136,7 +138,7 @@ def get_stats(filepath, starttime)
   @data[:requests][:uddc] = uddc == 0 ? "U" : uddc
   @data[:requests][:catalog] = catalog == 0 ? "U" : catalog
 
-  return line_date.to_time.utc.to_f
+  return line_date.utc.to_f
 end
 
 # ENV variable from config file
