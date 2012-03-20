@@ -21,11 +21,12 @@ Installation:
   Copy the thredds_ file into the SYSTEM munin plugins directory (usually /usr/share/munin/plugins)
 
   $ cp thredds_ /usr/share/munin/plugins
+  $ chmod 755
 
   Create symlinks in the ACTIVE munin plugins directory (usually /etc/munin/plugins)
 
   $ ln -s /usr/share/munin/plugins/thredds_ /etc/munin/plugins/thredds_errors
-  $ ln -s /usr/share/munin/plugins/thredds_ /etc/munin/plugins/thredds_requets
+  $ ln -s /usr/share/munin/plugins/thredds_ /etc/munin/plugins/thredds_requests
 
   Copy the thredds.config into the plugin configuration directory (usually /etc/munin/plugin-conf.d)
 
