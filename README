@@ -1,0 +1,54 @@
+A Munin plugin to monitor a THREDDS instance.
+
+Measures:
+
+  * The number of requests for each type of data access:
+    * DAP
+    * HTTP
+    * SOS
+    * ISO
+    * WMS
+    * WCS
+    * NCML
+    * UDDC
+
+  * The number of webpage requests (user browsing catalog)
+
+  * The number of errors
+
+Installation:
+
+  Copy the thredds_ file into the SYSTEM munin plugins directory (usually /usr/share/munin/plugins)
+
+  $ cp thredds_ /usr/share/munin/plugins
+
+  Create symlinks in the ACTIVE munin plugins directory (usually /etc/munin/plugins)
+
+  $ ln -s /usr/share/munin/plugins/thredds_ /etc/munin/plugins/thredds_errors
+  $ ln -s /usr/share/munin/plugins/thredds_ /etc/munin/plugins/thredds_requets
+
+  Copy the thredds.config into the plugin configuration directory (usually /etc/munin/plugin-conf.d)
+
+  $ cp thredds.config /etc/munin/plugin-conf.d/thredds
+
+  Edit the thredds config file to point to your threddsServlet.log file
+
+  [thredds_*]
+    env.logfile PATH/threddsServlet.log
+
+  Test the plugin.  You should see some values and not all "U" if your logfile has entries in it.
+
+  $ munin-run thredds_requests
+  dap.value 368
+  http.value U
+  sos.value U
+  iso.value U
+  wms.value U
+  wcs.value U
+  ncml.value U
+  uddc.value U
+  catalog.value 3
+
+  The plugin uses state files to track what the last timestamp was that it processed in the logfile .  You must remove the state files inbetween tests!  The files are usually located in /var/lib/muniun/plugin-state.
+
+  $ rm -f /var/lib/munin/plugin-state/thredds-*

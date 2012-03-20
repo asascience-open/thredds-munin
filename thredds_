@@ -1,0 +1,215 @@
+#! /usr/bin/env ruby
+
+=begin
+@dummyvar = <<-'=cut'
+
+=head1 NAME
+
+thredds_ - Munin plugin to monitor THREDDS servers.
+
+=head1 APPLICABLE SYSTEMS
+
+THREDDS 4.2 of higher (not tested on previous versions)
+
+=head1 USAGE
+
+Needs access to the THREDDS logfile (threddsServlet.log)
+
+=head1 CONFIGURATION
+
+The following environment variables are used by this plugin:
+
+=over 4
+
+=item logfile
+
+Location of the THREDDS logfile (threddsServlet.log)
+
+=back
+
+=head2 CONFIGURATION EXAMPLE
+
+  [thredds_*]
+    env.logfile /home/dev/Development/thredds-munin/samples/threddsServlet.log.2012-03-19-06
+
+=head1 AUTHORS
+
+  Kyle Wilcox <kwilcox@asascience.com>
+
+=head1 MAGIC MARKERS
+
+ #%# family=auto
+ #%# capabilities=suggest
+
+=cut
+
+=end
+
+require 'date'
+
+# Data hash to fill in
+@data = {
+        :requests => {  :dap => "U",
+                        :http => "U",
+                        :sos => "U",
+                        :iso => "U",
+                        :wms => "U",
+                        :wcs => "U",
+                        :ncml => "U",
+                        :uddc => "U",
+                        :catalog => "U" },
+        :errors => { :errors => "U" }
+      }
+
+def get_stats(filepath, starttime)
+
+  error_regex = %r{ ERROR - }
+  date_regex = %r{^[0-9\-]{10}T[0-9:]{8}\.[0-9]{3}\ -[0-9]{4}}
+  dap_regex = %r{ INFO  - thredds.server.opendap.OpendapServlet - doGet()}
+  wcs_regex = %r{ INFO  - thredds.server.wcs.WCSServlet}
+  wms_regex = %r{ INFO  - thredds.server.wms.ThreddsWmsController}
+  http_regex = %r{ INFO  - thredds.servlet.FileServerServlet}
+  sos_regex = %r{ INFO  - thredds.server.sos.controller.SosController - Handling SOS metadata request}
+  iso_regex = %r{ INFO  - thredds.server.RequestBracketingLogMessageFilter}
+  catalog_regex = %r{ INFO  - thredds.server.catalogservice.LocalCatalogServiceController - handleRequestInternal()}
+
+  errors, dap, wcs, wms, http, sos, iso, ncml, uddc, catalog = 0,0,0,0,0,0,0,0,0,0
+  line_date = nil
+
+  File.foreach(filepath) do |line|
+    line_date = DateTime.parse(date_regex.match(line).to_s).to_time rescue next
+
+    next if line_date < starttime
+
+    # Error
+    # 2012-03-19T12:00:51.834 -0400 [     37368][        ] ERROR - org.springframework.web.servlet.DispatcherServlet - Context initialization failed
+    # 2012-03-19T11:27:12.435 -0400 [   1625410][      50] ERROR - thredds.server.metadata.controller.AbstractMetadataController - null getTDSMetadata failed:    
+    errors += 1 if line =~ error_regex
+
+    # DAP request
+    #2012-03-19T06:01:04.065 -0400 [ 139701533][   11781] INFO  - thredds.server.opendap.OpendapServlet - doGet()
+    dap += 1 if line =~ dap_regex
+
+    # WCS
+    # 2012-03-19T12:12:57.480 -0400 [    763014][      23] INFO  - thredds.server.wcs.WCSServlet - Remote host: 184.180.13.66 - Request: "GET /thredds/wcs/alldata/acrosby/2007_withwaves.SWAN_ADCIRC_TPS.61.nc?service=WCS&version=1.0.0&request=GetCapabilities HTTP/1.1"
+    wcs += 1 if line =~ wcs_regex
+
+    # WMS
+    # 2012-03-19T12:15:22.531 -0400 [ 200680268][    3164] INFO  - thredds.server.wms.ThreddsWmsController - Remote host: 184.180.13.66 - Request: "GET /thredds/wms/estuarine_hyoxia/cbofs2/agg.nc?service=WMS&version=1.3.0&request=GetCapabilities HTTP/1.1"
+    wms += 1 if line =~ wms_regex
+
+    # HTTP request
+    # 2012-03-19T12:12:34.002 -0400 [    739536][      22] INFO  - thredds.servlet.FileServerServlet - Remote host: 184.180.13.66 - Request: "GET /thredds/fileServer/alldata/acrosby/2007_withwaves.SWAN_ADCIRC_TPS.61.nc HTTP/1.1"
+    http += 1 if line =~ http_regex
+
+    # SOS
+    # 2012-03-19T12:10:06.587 -0400 [    592121][        ] INFO  - thredds.server.sos.controller.SosController - Handling SOS metadata request.
+    sos += 1 if line =~ sos_regex
+
+    # ISO
+    # 2012-03-19T11:27:12.424 -0400 [   1625399][      50] INFO  - thredds.server.RequestBracketingLogMessageFilter - Remote host: 130.39.13.96 - Request: "GET /thredds/iso/in/und/adcirc/ike/ultralite/vardrag/wave/3d HTTP/1.1"
+    iso += 1 if line =~ iso_regex && line =~ /iso/
+
+    # NcML
+    # 2012-03-19T12:10:35.506 -0400 [    621040][      12] INFO  - thredds.server.RequestBracketingLogMessageFilter - Remote host: 184.180.13.66 - Request: "GET /thredds/ncml/estuarine_hypoxia/observations/cbp/WT2.1.nc?catalog=http://testbedapps-dev.sura.org/thredds/catalog/estuarine_hypoxia/observations/cbp/catalog.html&dataset=estuarine_hypoxia/observations/cbp/WT2.1.nc HTTP/1.1"
+    ncml += 1 if line =~ iso_regex && line =~ /ncml/
+
+    # UDDC
+    # 2012-03-19T12:11:01.529 -0400 [    647063][      13] INFO  - thredds.server.RequestBracketingLogMessageFilter - Remote host: 184.180.13.66 - Request: "GET /thredds/uddc/estuarine_hypoxia/observations/cbp/WT2.1.nc?catalog=http://testbedapps-dev.sura.org/thredds/catalog/estuarine_hypoxia/observations/cbp/catalog.html&dataset=estuarine_hypoxia/observations/cbp/WT2.1.nc HTTP/1.1"
+    uddc += 1 if line =~ iso_regex && line =~ /uddc/
+
+    # Catalog request
+    # 2012-03-19T12:09:21.322 -0400 [    546856][       9] INFO  - thredds.server.catalogservice.LocalCatalogServiceController - handleRequestInternal(): Remote host: 136.145.249.129 - Request: "GET /thredds/catalog/alldata/acrosby/ncISO/thredds/catalog.html HTTP/1.1"
+    # 2012-03-19T12:09:21.322 -0400 [    546856][       9] INFO  - thredds.server.catalogservice.LocalCatalogServiceController - handleRequestInternal(): Remote host: 184.180.13.66 - Request: "GET /thredds/catalog/estuarine_hypoxia/observations/cbp/catalog.html?dataset=estuarine_hypoxia/observations/cbp/WT2.1.nc HTTP/1.1"
+    catalog += 1 if line =~ catalog_regex
+
+  end
+
+  @data[:errors][:errors] = errors == 0 ? "U" : errors
+  @data[:requests][:dap] = dap == 0 ? "U" : dap
+  @data[:requests][:http] = http == 0 ? "U" : http
+  @data[:requests][:sos] = sos == 0 ? "U" : sos
+  @data[:requests][:iso] = iso == 0 ? "U" : iso
+  @data[:requests][:wms] = wms == 0 ? "U" : wms
+  @data[:requests][:wcs] = wcs == 0 ? "U" : wcs
+  @data[:requests][:ncml] = ncml == 0 ? "U" : ncml
+  @data[:requests][:uddc] = uddc == 0 ? "U" : uddc
+  @data[:requests][:catalog] = catalog == 0 ? "U" : catalog
+
+  return line_date.to_time.utc.to_f
+end
+
+# ENV variable from config file
+logfile = ENV.member?('logfile') ? ENV['logfile'] : "/home/dev/Development/thredds-munin/samples/threddsServlet.log.2012-03-19-06"
+
+# MODE
+e = IO.new(2, "w")
+mode = $0.gsub /.*\/*thredds_/, ""
+if mode =~ /\.*thredds\*/ then
+  e.puts "Invalid mode, options are: #{data.each{|k,v| puts k}}"
+  e.puts "You passed in: #{mode}"
+  exit 1
+end
+mode = mode.to_sym
+instance = /[\w]+$/.match($0).to_s.split("_")[0..-2].map(&:capitalize).join(" ") rescue "THREDDS"
+
+if ARGV[0] == "config"
+  if mode == :requests
+    puts "graph_title #{instance} Requests"
+    puts "graph_category thredds"
+    puts "graph_args --base 1000 -l 0"
+    puts "graph_vlabel Requests / ${graph_period}"
+    @data[mode].each do |k,v|
+      puts "#{k}.type DERIVE"
+      puts "#{k}.min 0"
+      puts "#{k}.label #{k}"
+      puts "#{k}.draw STACK"
+    end
+  elsif mode == :errors
+    puts "graph_title #{instance} Errors"
+    puts "graph_category thredds"
+    puts "graph_args --base 1000 -l 0"
+    puts "graph_vlabel Errors / ${graph_period}"
+    puts "errors.label Errors"
+    puts "errors.draw LINE2"
+    puts "errors.type DERIVE"
+    puts "errors.min 0"
+  end
+end
+
+if ARGV[0] == "autoconf"
+  begin
+    if get_stats(logfile, starttime)
+      puts "yes"
+    else
+      puts "no"
+    end
+  rescue
+    puts "no (#{$!})"
+  end
+  exit 0
+end
+
+if ARGV[0] == "suggest"
+  if get_stats(logfile, starttime)
+    @data.each do |k,v|
+      print "#{k}\n"
+    end
+  end
+  exit 0
+end
+
+# Statefile parsing
+statefile = "#{ENV['MUNIN_PLUGSTATE']}/thredds-#{mode.to_s}.state"
+starttime = Time.at(File.open(statefile, "rb") { |f| f.read.to_f }) rescue (Time.now - (60*60*24*365*100))
+
+begin
+  last_date = get_stats(logfile, starttime)
+  @data[mode].each do |k, v|
+    printf "#{k}.value %s\n", v
+  end
+  File.open(statefile, 'w+') {|f| f.write(last_date) }
+rescue Exception => error
+  e.puts "Error retrieving stats: #{error}"
+  exit 1
+end
