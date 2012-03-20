@@ -180,6 +180,10 @@ if ARGV[0] == "config"
   exit 0
 end
 
+# Statefile parsing
+statefile = "#{ENV['MUNIN_PLUGSTATE']}/thredds-#{mode.to_s}.state"
+starttime = Time.at(File.open(statefile, "rb") { |f| f.read.to_f }) rescue (Time.now - (60*60*24*365*100))
+
 if ARGV[0] == "autoconf"
   begin
     if get_stats(logfile, starttime)
@@ -201,10 +205,6 @@ if ARGV[0] == "suggest"
   end
   exit 0
 end
-
-# Statefile parsing
-statefile = "#{ENV['MUNIN_PLUGSTATE']}/thredds-#{mode.to_s}.state"
-starttime = Time.at(File.open(statefile, "rb") { |f| f.read.to_f }) rescue (Time.now - (60*60*24*365*100))
 
 begin
   last_date = get_stats(logfile, starttime)
