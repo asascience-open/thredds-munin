@@ -177,6 +177,7 @@ if ARGV[0] == "config"
     puts "errors.type DERIVE"
     puts "errors.min 0"
   end
+  exit 0
 end
 
 if ARGV[0] == "autoconf"
