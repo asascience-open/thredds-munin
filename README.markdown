@@ -3,6 +3,10 @@ THREDDS-Munin
 A Munin plugin for monitoring a THREDDS instance
 --------------------------------------------
 
+##### Requirements ####
+-  Ruby >= 1.8.7 (Tested on ruby-1.8.7-p358 and ruby-1.9.3-p125)
+-  THREDDS
+-  Munin-node
 
 ##### Measurments ####
 
@@ -17,6 +21,8 @@ A Munin plugin for monitoring a THREDDS instance
   * WCS
   * NCML
   * UDDC
+
+[Samples](http://munin.maracoos.org/maracoos.org/tds.maracoos.org/thredds_requests.html "Samples")
 
 #### Installation ####
 
