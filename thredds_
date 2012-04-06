@@ -160,14 +160,16 @@ end
 
 # MODE
 e = IO.new(2, "w")
-mode = $0.gsub /.*\/*thredds_/, ""
+
+stripped = /[\w]+$/.match($0).to_s.split("_")
+mode = stripped[-1]
 if mode =~ /\.*thredds\*/ then
   e.puts "Invalid mode, options are: #{data.each{|k,v| puts k}}"
   e.puts "You passed in: #{mode}"
   exit 1
 end
 mode = mode.empty? ? :none : mode.to_sym
-instance = /[\w]+$/.match($0).to_s.split("_")[0..-2].map(&:capitalize).join(" ") rescue "THREDDS"
+instance = stripped[0..-2].map(&:capitalize).join(" ") rescue "THREDDS"
 
 # Statefile parsing
 statefile = "#{ENV['MUNIN_PLUGSTATE']}/thredds-#{mode.to_s}.state"
